@@ -6,18 +6,41 @@ import os  # To access environment variables
 
 # Load environment variables
 TMDB_API_KEY = os.getenv('TMDB_API_KEY', '8265bd1679663a7ea12ac168da84d2e8')  # Default to current key if not set
+PORT = int(os.getenv('PORT', 10000))  # Default port for Render
 
-movies_dic = pickle.load(open('movies_dic.pkl', 'rb'))  # To open save model.
-movies = pd.DataFrame(movies_dic)
+# Configure Streamlit to use the correct port
+st.set_page_config(
+    page_title="Movie Recommender",
+    page_icon="🎬",
+    layout="wide"
+)
 
-similarity = pickle.load(open('tag_similarity.pkl', 'rb'))  # To open the saved model.
+# Error handling for pickle loading
+try:
+    movies_dic = pickle.load(open('movies_dic.pkl', 'rb'))
+    movies = pd.DataFrame(movies_dic)
+    similarity = pickle.load(open('tag_similarity.pkl', 'rb'))
+except Exception as e:
+    st.error(f"Error loading movie data: {str(e)}")
+    st.stop()
 
 def fetch_poster(movie_id):
     """This function use api to get the response and return the poster"""
-    response = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_API_KEY}&language=en-US")
-    data = response.json()
-    print(data)
-    return "https://image.tmdb.org/t/p/w500" + data['poster_path']
+    try:
+        response = requests.get(
+            f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_API_KEY}&language=en-US",
+            timeout=10
+        )
+        response.raise_for_status()  # Raise an exception for bad status codes
+        data = response.json()
+        
+        if 'poster_path' not in data or data['poster_path'] is None:
+            return "https://via.placeholder.com/500x750.png?text=No+Poster+Available"
+            
+        return "https://image.tmdb.org/t/p/w500" + data['poster_path']
+    except Exception as e:
+        st.warning(f"Could not fetch poster for movie ID {movie_id}: {str(e)}")
+        return "https://via.placeholder.com/500x750.png?text=Poster+Not+Found"
 
 def recommendation(movie):
     """This function fetches the title and poster using the index."""

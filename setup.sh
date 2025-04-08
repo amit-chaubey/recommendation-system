@@ -3,8 +3,12 @@ mkdir -p ~/.streamlit
 echo "[server]
 headless = true
 port = $PORT
-enableCORS = false
+enableCORS = true
 address = \"0.0.0.0\"
+
+[browser]
+serverAddress = \"0.0.0.0\"
+serverPort = $PORT
 
 [theme]
 primaryColor = \"#F63366\"
