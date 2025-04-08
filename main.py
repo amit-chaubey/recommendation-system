@@ -1,91 +1,99 @@
-import streamlit as st  # To create main app.
-import pickle  # To save the model.
-import pandas as pd  # To create dataframe.
-import requests  # To get the request.
-import os  # To access environment variables
+import streamlit as st
+import pickle
+import pandas as pd
+import requests
+import os
+from pathlib import Path
 
-# Load environment variables
-TMDB_API_KEY = os.getenv('TMDB_API_KEY', '8265bd1679663a7ea12ac168da84d2e8')  # Default to current key if not set
-PORT = int(os.getenv('PORT', 10000))  # Default port for Render
-
-# Configure Streamlit to use the correct port
+# Configure Streamlit
 st.set_page_config(
     page_title="Movie Recommender",
     page_icon="🎬",
     layout="wide"
 )
 
-# Error handling for pickle loading
-try:
-    movies_dic = pickle.load(open('movies_dic.pkl', 'rb'))
-    movies = pd.DataFrame(movies_dic)
-    similarity = pickle.load(open('tag_similarity.pkl', 'rb'))
-except Exception as e:
-    st.error(f"Error loading movie data: {str(e)}")
-    st.stop()
+# Load environment variables
+TMDB_API_KEY = os.getenv('TMDB_API_KEY', '8265bd1679663a7ea12ac168da84d2e8')
+
+# Initialize session state
+if 'movies' not in st.session_state:
+    try:
+        # Get the directory of the current file
+        current_dir = Path(__file__).parent
+
+        # Load movie data
+        with open(current_dir / 'movies_dic.pkl', 'rb') as f:
+            movies_dic = pickle.load(f)
+        st.session_state.movies = pd.DataFrame(movies_dic)
+
+        # Load similarity matrix
+        with open(current_dir / 'tag_similarity.pkl', 'rb') as f:
+            st.session_state.similarity = pickle.load(f)
+    except Exception as e:
+        st.error(f"Error loading data: {str(e)}")
+        st.stop()
 
 def fetch_poster(movie_id):
-    """This function use api to get the response and return the poster"""
+    """Fetch movie poster from TMDB API"""
     try:
-        response = requests.get(
-            f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_API_KEY}&language=en-US",
-            timeout=10
-        )
-        response.raise_for_status()  # Raise an exception for bad status codes
+        url = f"https://api.themoviedb.org/3/movie/{movie_id}"
+        headers = {
+            "accept": "application/json",
+            "Authorization": f"Bearer {TMDB_API_KEY}"
+        }
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
         data = response.json()
         
-        if 'poster_path' not in data or data['poster_path'] is None:
+        if not data.get('poster_path'):
             return "https://via.placeholder.com/500x750.png?text=No+Poster+Available"
             
-        return "https://image.tmdb.org/t/p/w500" + data['poster_path']
+        return f"https://image.tmdb.org/t/p/w500{data['poster_path']}"
     except Exception as e:
-        st.warning(f"Could not fetch poster for movie ID {movie_id}: {str(e)}")
+        st.warning(f"Could not fetch poster: {str(e)}")
         return "https://via.placeholder.com/500x750.png?text=Poster+Not+Found"
 
-def recommendation(movie):
-    """This function fetches the title and poster using the index."""
-    index = movies[movies['title'] == movie].index[0]
-    distance = sorted(list(enumerate(similarity[index])), reverse=True, key=lambda vector: vector[1])
+def get_recommendations(movie):
+    """Get movie recommendations based on similarity"""
+    try:
+        idx = st.session_state.movies[st.session_state.movies['title'] == movie].index[0]
+        distances = sorted(
+            list(enumerate(st.session_state.similarity[idx])),
+            reverse=True,
+            key=lambda x: x[1]
+        )
+        
+        recommendations = []
+        for i in distances[1:6]:  # Get top 5 recommendations (excluding the movie itself)
+            movie_data = st.session_state.movies.iloc[i[0]]
+            recommendations.append({
+                'title': movie_data.title,
+                'poster': fetch_poster(movie_data.id)
+            })
+        return recommendations
+    except Exception as e:
+        st.error(f"Error getting recommendations: {str(e)}")
+        return []
 
-    movies_recommended = []
-    movies_recommended_poster = []
-    for dist in distance[0:5]:
-        movie_id = movies.iloc[dist[0]].id
-        movies_recommended.append(movies.iloc[dist[0]].title)
-        movies_recommended_poster.append((fetch_poster(movie_id)))
-    return movies_recommended, movies_recommended_poster
+# Main UI
+st.title('🎬 AI-Powered Movie Recommender')
+st.write('Select a movie and get personalized recommendations!')
 
-st.title('AI-Powered Movie Recommender System')
+# Movie selection
+selected_movie = st.selectbox(
+    "Choose a movie you like",
+    options=st.session_state.movies['title'].values
+)
 
-select_movie = st.selectbox("What's in your mind", (movies['title'].values))
-
-# creating a button for name and poster
-if st.button('Recommend'):
-    names, posters = recommendation(select_movie)
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.text(names[0])
-        st.image(posters[0])
-
-    with col2:
-        st.text(names[1])
-        st.image(posters[1])
-
-    with col3:
-        st.text(names[2])
-        st.image(posters[2])
-
-
-    col4, col5, col6 = st.columns(3)
-
-    if len(names) > 3:
-        with col4:
-            st.text(names[3])
-            st.image(posters[3])
-
-    if len(names) > 4:
-        with col5:
-            st.text(names[4])
-            st.image(posters[4])
+if st.button('Get Recommendations 🎯'):
+    with st.spinner('Finding similar movies...'):
+        recommendations = get_recommendations(selected_movie)
+        
+        if recommendations:
+            cols = st.columns(5)
+            for col, movie in zip(cols, recommendations):
+                with col:
+                    st.image(movie['poster'], use_column_width=True)
+                    st.markdown(f"**{movie['title']}**")
+        else:
+            st.warning("Couldn't find recommendations at this time. Please try again.")
