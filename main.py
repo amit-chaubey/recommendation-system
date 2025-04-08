@@ -2,6 +2,10 @@ import streamlit as st  # To create main app.
 import pickle  # To save the model.
 import pandas as pd  # To create dataframe.
 import requests  # To get the request.
+import os  # To access environment variables
+
+# Load environment variables
+TMDB_API_KEY = os.getenv('TMDB_API_KEY', '8265bd1679663a7ea12ac168da84d2e8')  # Default to current key if not set
 
 movies_dic = pickle.load(open('movies_dic.pkl', 'rb'))  # To open save model.
 movies = pd.DataFrame(movies_dic)
@@ -10,8 +14,8 @@ similarity = pickle.load(open('tag_similarity.pkl', 'rb'))  # To open the saved 
 
 def fetch_poster(movie_id):
     """This function use api to get the response and return the poster"""
-    reponse = requests.get("https://api.themoviedb.org/3/movie/{}?api_key=8265bd1679663a7ea12ac168da84d2e8&language=en-US".format(movie_id))
-    data = reponse.json()
+    response = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_API_KEY}&language=en-US")
+    data = response.json()
     print(data)
     return "https://image.tmdb.org/t/p/w500" + data['poster_path']
 
