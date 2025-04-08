@@ -3,11 +3,13 @@ services:
     name: movie-recommender
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: streamlit run main.py
+    startCommand: sh setup.sh && streamlit run main.py --server.port=$PORT --server.address=0.0.0.0
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.12
       - key: PORT
         value: 10000
+      - key: TMDB_API_KEY
+        sync: false  # This makes it a secret that needs to be set in Render dashboard
     healthCheckPath: /
     autoDeploy: true 
