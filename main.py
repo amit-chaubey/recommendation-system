@@ -6,23 +6,34 @@ import os
 from pathlib import Path
 import urllib.parse
 
+# Debug information at the very start
+st.write("Environment Variables Debug:")
+st.write("MOVIES_PICKLE_URL exists:", os.getenv('MOVIES_PICKLE_URL') is not None)
+st.write("SIMILARITY_PICKLE_URL exists:", os.getenv('SIMILARITY_PICKLE_URL') is not None)
+st.write("Raw MOVIES_PICKLE_URL:", os.getenv('MOVIES_PICKLE_URL', 'Not found'))
+
 def convert_drive_link(url):
     """Convert Google Drive link to direct download link"""
     try:
         if not url:
+            st.error("URL is empty")
             return ''
         if 'drive.google.com' in url:
             # Extract file ID from the URL
             if '/file/d/' in url:
                 file_id = url.split('/file/d/')[1].split('/')[0]
+                st.write(f"Extracted file ID: {file_id}")
             elif 'id=' in url:
                 file_id = url.split('id=')[1].split('&')[0]
+                st.write(f"Extracted file ID: {file_id}")
             else:
                 st.error(f"Invalid Google Drive URL format: {url}")
                 return ''
             
             # Create the direct download link
-            return f"https://drive.google.com/uc?export=download&id={file_id}"
+            download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+            st.write(f"Created download URL: {download_url}")
+            return download_url
         return url
     except Exception as e:
         st.error(f"Error processing URL: {str(e)}")
