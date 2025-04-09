@@ -19,7 +19,7 @@ if not TMDB_API_KEY:
     st.error("TMDB API key not found. Please set the TMDB_API_KEY environment variable.")
     st.stop()
 
-# URLs for pickle files (you'll need to replace these with your actual URLs)
+# URLs for pickle files
 MOVIES_URL = os.getenv('MOVIES_PICKLE_URL', '')
 SIMILARITY_URL = os.getenv('SIMILARITY_PICKLE_URL', '')
 
@@ -28,6 +28,9 @@ def download_pickle_file(url, filename):
     try:
         if not url:
             # If URL not provided, try to load local file
+            if not os.path.exists(filename):
+                st.error(f"Error: {filename} not found and no URL provided")
+                return None
             with open(filename, 'rb') as f:
                 return pickle.load(f)
         
@@ -38,6 +41,32 @@ def download_pickle_file(url, filename):
     except Exception as e:
         st.error(f"Error downloading/loading {filename}: {str(e)}")
         return None
+
+# Initialize data before session state
+try:
+    # Load movie data
+    movies_dic = download_pickle_file(MOVIES_URL, 'movies_dic.pkl')
+    if movies_dic is None:
+        st.error("Failed to load movies data")
+        st.stop()
+    
+    movies_df = pd.DataFrame(movies_dic)
+    
+    # Load similarity matrix
+    similarity = download_pickle_file(SIMILARITY_URL, 'tag_similarity.pkl')
+    if similarity is None:
+        st.error("Failed to load similarity data")
+        st.stop()
+        
+    # Initialize session state
+    if 'movies' not in st.session_state:
+        st.session_state.movies = movies_df
+    if 'similarity' not in st.session_state:
+        st.session_state.similarity = similarity
+        
+except Exception as e:
+    st.error(f"Error initializing data: {str(e)}")
+    st.stop()
 
 def fetch_poster(movie_id):
     """Fetch movie poster from TMDB API"""
@@ -86,20 +115,24 @@ st.title('🎬 AI-Powered Movie Recommender')
 st.write('Select a movie and get personalized recommendations!')
 
 # Movie selection
-selected_movie = st.selectbox(
-    "Choose a movie you like",
-    options=st.session_state.movies['title'].values
-)
+try:
+    selected_movie = st.selectbox(
+        "Choose a movie you like",
+        options=st.session_state.movies['title'].values
+    )
 
-if st.button('Get Recommendations 🎯'):
-    with st.spinner('Finding similar movies...'):
-        recommendations = get_recommendations(selected_movie)
-        
-        if recommendations:
-            cols = st.columns(5)
-            for col, movie in zip(cols, recommendations):
-                with col:
-                    st.image(movie['poster'], use_column_width=True)
-                    st.markdown(f"**{movie['title']}**")
-        else:
-            st.warning("Couldn't find recommendations at this time. Please try again.")
+    if st.button('Get Recommendations 🎯'):
+        with st.spinner('Finding similar movies...'):
+            recommendations = get_recommendations(selected_movie)
+            
+            if recommendations:
+                cols = st.columns(5)
+                for col, movie in zip(cols, recommendations):
+                    with col:
+                        st.image(movie['poster'], use_column_width=True)
+                        st.markdown(f"**{movie['title']}**")
+            else:
+                st.warning("Couldn't find recommendations at this time. Please try again.")
+except Exception as e:
+    st.error(f"Error in UI: {str(e)}")
+    st.stop()
