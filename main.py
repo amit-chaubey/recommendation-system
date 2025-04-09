@@ -6,6 +6,13 @@ import os
 from pathlib import Path
 import urllib.request
 
+def convert_drive_link(url):
+    """Convert Google Drive link to direct download link"""
+    if 'drive.google.com' in url:
+        file_id = url.split('/d/')[1].split('/')[0]
+        return f"https://drive.google.com/uc?id={file_id}"
+    return url
+
 # Initialize session state first
 if 'movies' not in st.session_state or 'similarity' not in st.session_state:
     st.session_state.movies = None
@@ -25,8 +32,8 @@ if not TMDB_API_KEY:
     st.stop()
 
 # URLs for pickle files
-MOVIES_URL = os.getenv('MOVIES_PICKLE_URL', '')
-SIMILARITY_URL = os.getenv('SIMILARITY_PICKLE_URL', '')
+MOVIES_URL = convert_drive_link(os.getenv('MOVIES_PICKLE_URL', ''))
+SIMILARITY_URL = convert_drive_link(os.getenv('SIMILARITY_PICKLE_URL', ''))
 
 def download_pickle_file(url, filename):
     """Download pickle file from URL"""
@@ -40,9 +47,20 @@ def download_pickle_file(url, filename):
                 return pickle.load(f)
         
         # Download from URL
-        urllib.request.urlretrieve(url, filename)
+        st.write(f"Downloading {filename}...")  # Add loading indicator
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        
+        # Save the file
+        with open(filename, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+                    
+        # Load the downloaded file
         with open(filename, 'rb') as f:
             return pickle.load(f)
+            
     except Exception as e:
         st.error(f"Error downloading/loading {filename}: {str(e)}")
         return None
