@@ -11,5 +11,9 @@ services:
         value: 10000
       - key: TMDB_API_KEY
         sync: false  # This makes it a secret that needs to be set in Render dashboard
+      - key: MOVIES_PICKLE_URL
+        sync: false  # URL to movies_dic.pkl in Google Drive
+      - key: SIMILARITY_PICKLE_URL
+        sync: false  # URL to tag_similarity.pkl in Google Drive
     healthCheckPath: /
     autoDeploy: true 
