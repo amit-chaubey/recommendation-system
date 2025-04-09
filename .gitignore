@@ -21,9 +21,16 @@ env/
 *.pkl
 *.h5
 *.model
+*.bin
 
 # Logs
 *.log
 
 # Local development
 .DS_Store
+.env.local
+.env.*.local
+
+# Git LFS
+.gitattributes
+.git/lfs/
