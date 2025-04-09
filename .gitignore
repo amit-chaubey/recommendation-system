@@ -1,1 +1,29 @@
-venv
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual Environment
+venv/
+env/
+.env
+
+# IDE
+.idea/
+.vscode/
+
+# Large files
+*.pkl
+*.h5
+*.model
+
+# Logs
+*.log
+
+# Local development
+.DS_Store
