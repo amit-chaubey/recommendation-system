@@ -4,14 +4,29 @@ import pandas as pd
 import requests
 import os
 from pathlib import Path
-import urllib.request
+import urllib.parse
 
 def convert_drive_link(url):
     """Convert Google Drive link to direct download link"""
-    if 'drive.google.com' in url:
-        file_id = url.split('/d/')[1].split('/')[0]
-        return f"https://drive.google.com/uc?id={file_id}"
-    return url
+    try:
+        if not url:
+            return ''
+        if 'drive.google.com' in url:
+            # Extract file ID from the URL
+            if '/file/d/' in url:
+                file_id = url.split('/file/d/')[1].split('/')[0]
+            elif 'id=' in url:
+                file_id = url.split('id=')[1].split('&')[0]
+            else:
+                st.error(f"Invalid Google Drive URL format: {url}")
+                return ''
+            
+            # Create the direct download link
+            return f"https://drive.google.com/uc?export=download&id={file_id}"
+        return url
+    except Exception as e:
+        st.error(f"Error processing URL: {str(e)}")
+        return ''
 
 # Initialize session state first
 if 'movies' not in st.session_state or 'similarity' not in st.session_state:
@@ -35,6 +50,11 @@ if not TMDB_API_KEY:
 MOVIES_URL = convert_drive_link(os.getenv('MOVIES_PICKLE_URL', ''))
 SIMILARITY_URL = convert_drive_link(os.getenv('SIMILARITY_PICKLE_URL', ''))
 
+# Debug information
+st.write("Debug Info:")
+st.write(f"Movies URL: {MOVIES_URL}")
+st.write(f"Similarity URL: {SIMILARITY_URL}")
+
 def download_pickle_file(url, filename):
     """Download pickle file from URL"""
     try:
@@ -47,8 +67,13 @@ def download_pickle_file(url, filename):
                 return pickle.load(f)
         
         # Download from URL
-        st.write(f"Downloading {filename}...")  # Add loading indicator
-        response = requests.get(url, stream=True)
+        st.write(f"Downloading {filename}...")
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        
+        response = requests.get(url, headers=headers, stream=True)
         response.raise_for_status()
         
         # Save the file
@@ -56,7 +81,7 @@ def download_pickle_file(url, filename):
             for chunk in response.iter_content(chunk_size=8192):
                 if chunk:
                     f.write(chunk)
-                    
+        
         # Load the downloaded file
         with open(filename, 'rb') as f:
             return pickle.load(f)
