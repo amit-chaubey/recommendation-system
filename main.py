@@ -6,6 +6,13 @@ import os
 from pathlib import Path
 import urllib.parse
 
+# Configure Streamlit - THIS MUST BE THE FIRST STREAMLIT COMMAND
+st.set_page_config(
+    page_title="Movie Recommender",
+    page_icon="🎬",
+    layout="wide"
+)
+
 # Debug information at the very start
 st.write("Environment Variables Debug:")
 st.write("MOVIES_PICKLE_URL exists:", os.getenv('MOVIES_PICKLE_URL') is not None)
@@ -43,13 +50,6 @@ def convert_drive_link(url):
 if 'movies' not in st.session_state or 'similarity' not in st.session_state:
     st.session_state.movies = None
     st.session_state.similarity = None
-
-# Configure Streamlit
-st.set_page_config(
-    page_title="Movie Recommender",
-    page_icon="🎬",
-    layout="wide"
-)
 
 # Load environment variables
 TMDB_API_KEY = os.getenv('TMDB_API_KEY')
