@@ -6,6 +6,11 @@ import os
 from pathlib import Path
 import urllib.request
 
+# Initialize session state first
+if 'movies' not in st.session_state or 'similarity' not in st.session_state:
+    st.session_state.movies = None
+    st.session_state.similarity = None
+
 # Configure Streamlit
 st.set_page_config(
     page_title="Movie Recommender",
@@ -42,31 +47,30 @@ def download_pickle_file(url, filename):
         st.error(f"Error downloading/loading {filename}: {str(e)}")
         return None
 
-# Initialize data before session state
-try:
-    # Load movie data
-    movies_dic = download_pickle_file(MOVIES_URL, 'movies_dic.pkl')
-    if movies_dic is None:
-        st.error("Failed to load movies data")
-        st.stop()
-    
-    movies_df = pd.DataFrame(movies_dic)
-    
-    # Load similarity matrix
-    similarity = download_pickle_file(SIMILARITY_URL, 'tag_similarity.pkl')
-    if similarity is None:
-        st.error("Failed to load similarity data")
-        st.stop()
+# Load data if not already in session state
+if st.session_state.movies is None or st.session_state.similarity is None:
+    try:
+        # Load movie data
+        movies_dic = download_pickle_file(MOVIES_URL, 'movies_dic.pkl')
+        if movies_dic is None:
+            st.error("Failed to load movies data. Please check MOVIES_PICKLE_URL environment variable.")
+            st.stop()
         
-    # Initialize session state
-    if 'movies' not in st.session_state:
+        movies_df = pd.DataFrame(movies_dic)
+        
+        # Load similarity matrix
+        similarity = download_pickle_file(SIMILARITY_URL, 'tag_similarity.pkl')
+        if similarity is None:
+            st.error("Failed to load similarity data. Please check SIMILARITY_PICKLE_URL environment variable.")
+            st.stop()
+            
+        # Update session state
         st.session_state.movies = movies_df
-    if 'similarity' not in st.session_state:
         st.session_state.similarity = similarity
-        
-except Exception as e:
-    st.error(f"Error initializing data: {str(e)}")
-    st.stop()
+            
+    except Exception as e:
+        st.error(f"Error initializing data: {str(e)}")
+        st.stop()
 
 def fetch_poster(movie_id):
     """Fetch movie poster from TMDB API"""
@@ -91,6 +95,10 @@ def fetch_poster(movie_id):
 def get_recommendations(movie):
     """Get movie recommendations based on similarity"""
     try:
+        if st.session_state.movies is None or st.session_state.similarity is None:
+            st.error("Movie data not properly loaded")
+            return []
+            
         idx = st.session_state.movies[st.session_state.movies['title'] == movie].index[0]
         distances = sorted(
             list(enumerate(st.session_state.similarity[idx])),
@@ -116,23 +124,26 @@ st.write('Select a movie and get personalized recommendations!')
 
 # Movie selection
 try:
-    selected_movie = st.selectbox(
-        "Choose a movie you like",
-        options=st.session_state.movies['title'].values
-    )
+    if st.session_state.movies is not None:
+        selected_movie = st.selectbox(
+            "Choose a movie you like",
+            options=st.session_state.movies['title'].values
+        )
 
-    if st.button('Get Recommendations 🎯'):
-        with st.spinner('Finding similar movies...'):
-            recommendations = get_recommendations(selected_movie)
-            
-            if recommendations:
-                cols = st.columns(5)
-                for col, movie in zip(cols, recommendations):
-                    with col:
-                        st.image(movie['poster'], use_column_width=True)
-                        st.markdown(f"**{movie['title']}**")
-            else:
-                st.warning("Couldn't find recommendations at this time. Please try again.")
+        if st.button('Get Recommendations 🎯'):
+            with st.spinner('Finding similar movies...'):
+                recommendations = get_recommendations(selected_movie)
+                
+                if recommendations:
+                    cols = st.columns(5)
+                    for col, movie in zip(cols, recommendations):
+                        with col:
+                            st.image(movie['poster'], use_column_width=True)
+                            st.markdown(f"**{movie['title']}**")
+                else:
+                    st.warning("Couldn't find recommendations at this time. Please try again.")
+    else:
+        st.error("Movie data not loaded. Please check your environment variables and try again.")
 except Exception as e:
     st.error(f"Error in UI: {str(e)}")
     st.stop()
