@@ -13,7 +13,10 @@ st.set_page_config(
 )
 
 # Load environment variables
-TMDB_API_KEY = os.getenv('TMDB_API_KEY', '8265bd1679663a7ea12ac168da84d2e8')
+TMDB_API_KEY = os.getenv('TMDB_API_KEY')
+if not TMDB_API_KEY:
+    st.error("TMDB API key not found. Please set the TMDB_API_KEY environment variable.")
+    st.stop()
 
 # Initialize session state
 if 'movies' not in st.session_state:
