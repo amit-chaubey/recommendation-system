@@ -6,6 +6,9 @@ port = $PORT
 enableCORS = true
 address = \"0.0.0.0\"
 
+[global]
+developmentMode = false
+
 [browser]
 serverAddress = \"0.0.0.0\"
 serverPort = $PORT
@@ -15,5 +18,4 @@ primaryColor = \"#F63366\"
 backgroundColor = \"#FFFFFF\"
 secondaryBackgroundColor = \"#F0F2F6\"
 textColor = \"#262730\"
-font = \"sans serif\"
-" > ~/.streamlit/config.toml
+font = \"sans serif\"" > ~/.streamlit/config.toml
