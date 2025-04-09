@@ -4,6 +4,7 @@ import pandas as pd
 import requests
 import os
 from pathlib import Path
+import urllib.request
 
 # Configure Streamlit
 st.set_page_config(
@@ -18,23 +19,25 @@ if not TMDB_API_KEY:
     st.error("TMDB API key not found. Please set the TMDB_API_KEY environment variable.")
     st.stop()
 
-# Initialize session state
-if 'movies' not in st.session_state:
+# URLs for pickle files (you'll need to replace these with your actual URLs)
+MOVIES_URL = os.getenv('MOVIES_PICKLE_URL', '')
+SIMILARITY_URL = os.getenv('SIMILARITY_PICKLE_URL', '')
+
+def download_pickle_file(url, filename):
+    """Download pickle file from URL"""
     try:
-        # Get the directory of the current file
-        current_dir = Path(__file__).parent
-
-        # Load movie data
-        with open(current_dir / 'movies_dic.pkl', 'rb') as f:
-            movies_dic = pickle.load(f)
-        st.session_state.movies = pd.DataFrame(movies_dic)
-
-        # Load similarity matrix
-        with open(current_dir / 'tag_similarity.pkl', 'rb') as f:
-            st.session_state.similarity = pickle.load(f)
+        if not url:
+            # If URL not provided, try to load local file
+            with open(filename, 'rb') as f:
+                return pickle.load(f)
+        
+        # Download from URL
+        urllib.request.urlretrieve(url, filename)
+        with open(filename, 'rb') as f:
+            return pickle.load(f)
     except Exception as e:
-        st.error(f"Error loading data: {str(e)}")
-        st.stop()
+        st.error(f"Error downloading/loading {filename}: {str(e)}")
+        return None
 
 def fetch_poster(movie_id):
     """Fetch movie poster from TMDB API"""
