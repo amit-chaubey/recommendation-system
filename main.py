@@ -3,14 +3,29 @@ import pickle  # To save the model.
 import pandas as pd  # To create dataframe.
 import requests  # To get the request.
 import os
+import gdown
 
 # Load environment variables
 TMDB_API_KEY = os.getenv('TMDB_API_KEY', '8265bd1679663a7ea12ac168da84d2e8')  # Fallback to default key if not set
 
-movies_dic = pickle.load(open('movies_dic.pkl', 'rb'))  # To open save model.
-movies = pd.DataFrame(movies_dic)
+def download_from_gdrive(file_id, dest_path):
+    if not os.path.exists(dest_path):
+        url = f"https://drive.google.com/uc?id={file_id}"
+        gdown.download(url, dest_path, quiet=False)
 
-similarity = pickle.load(open('tag_similarity.pkl', 'rb'))  # To open the saved model.
+# Google Drive file IDs
+MOVIES_DIC_ID = "1GE19JsLWNSTWUwVS_EuiZsNy_2D8EQJO"  # movies_dic.pkl
+TAG_SIMILARITY_ID = "12dYavQGQTB6e6KSFEFhwMSUzo_08DU8A"  # tag_similarity.pkl
+MOVIES_ID = "1J3qwqguOYPpBYGyj5KZhI1tyGxKZzimx"  # movies.pkl
+
+download_from_gdrive(MOVIES_DIC_ID, "movies_dic.pkl")
+download_from_gdrive(TAG_SIMILARITY_ID, "tag_similarity.pkl")
+download_from_gdrive(MOVIES_ID, "movies.pkl")
+
+# Now load as usual
+movies_dic = pickle.load(open('movies_dic.pkl', 'rb'))
+movies = pd.DataFrame(movies_dic)
+similarity = pickle.load(open('tag_similarity.pkl', 'rb'))
 
 def fetch_poster(movie_id):
     """This function use api to get the response and return the poster"""
